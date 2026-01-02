@@ -1,0 +1,45 @@
+{
+  "name": "GenMediBot - AI Emergency Assistant",
+  "short_name": "GenMediBot",
+  "description": "AI-powered emergency assistant providing first aid guidance and emotional support",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f9ff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "categories": ["health", "medical", "emergency", "lifestyle"],
+  "lang": "en-US",
+  "scope": "/",
+  "id": "genmedibot",
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Emergency Chat",
+      "short_name": "Chat",
+      "description": "Quick access to AI emergency assistant",
+      "url": "/",
+      "icons": []
+    },
+    {
+      "name": "Calm Corner",
+      "short_name": "Calm",
+      "description": "Breathing exercises and calming techniques",
+      "url": "/calm",
+      "icons": []
+    },
+    {
+      "name": "Emergency Contacts",
+      "short_name": "Emergency",
+      "description": "Quick access to emergency numbers",
+      "url": "/emergency",
+      "icons": []
+    }
+  ]
+}
