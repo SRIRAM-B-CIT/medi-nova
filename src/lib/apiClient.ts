@@ -112,6 +112,35 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // Vital records endpoints
+  async getVitalRecords() {
+    return this.request('/vital-records');
+  }
+
+  async createVitalRecord(data: any) {
+    return this.request('/vital-records', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteVitalRecord(id: string) {
+    return this.request(`/vital-records/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async deleteAllVitalRecords() {
+    return this.request('/vital-records', {
+      method: 'DELETE',
+    });
+  }
+
+  // Trend analysis endpoints
+  async getTrendAnalysis(limit: number = 10) {
+    return this.request(`/trend-analysis?limit=${limit}`);
+  }
 }
 
 export const apiClient = new ApiClient();

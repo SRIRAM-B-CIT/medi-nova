@@ -7,6 +7,8 @@ const connectDB = require('./config/database');
 const authRoutes = require('./routes/auth');
 const patientDetailsRoutes = require('./routes/patientDetails');
 const medicationRemindersRoutes = require('./routes/medicationReminders');
+const vitalRecordsRoutes = require('./routes/vitalRecords');
+const trendAnalysisRoutes = require('./routes/trendAnalysis');
 
 const app = express();
 
@@ -29,6 +31,8 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/patient-details', patientDetailsRoutes);
 app.use('/api/medication-reminders', medicationRemindersRoutes);
+app.use('/api/vital-records', vitalRecordsRoutes);
+app.use('/api/trend-analysis', trendAnalysisRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

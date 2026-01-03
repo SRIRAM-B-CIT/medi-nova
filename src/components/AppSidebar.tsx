@@ -33,14 +33,13 @@ const patientMainItems = [
   { title: 'Dashboard', url: '/', icon: Heart },
   { title: 'Nearby Hospitals', url: '/hospitals', icon: MapPin },
   { title: 'My Details', url: '/patient-details', icon: FileText },
-  { title: 'Emergency', url: '/emergency', icon: Phone },
 ];
 
 const patientMedicalTools = [
   { title: 'Medical Chatbot', url: '/medical-chatbot', icon: Bot },
   { title: 'Lab Report', url: '/voice-ai', icon: FileText },
   { title: 'Disease Risk', url: '/disease-risk', icon: Brain },
-  { title: 'Disease Identifier', url: '/disease-identifier', icon: Stethoscope },
+  
   
 ];
 
