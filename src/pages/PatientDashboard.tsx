@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { apiClient } from '@/lib/apiClient';
+import { thingSpeakService } from '@/lib/thingSpeakService';
 import MedicationReminder from '@/components/MedicationReminder';
 import TrendAnalysis from '@/components/TrendAnalysis';
 import {
@@ -22,7 +23,12 @@ import {
   History,
   Trash2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Mic,
+  Square,
+  RefreshCw,
+  Wifi,
+  Settings
 } from 'lucide-react';
 
 interface VitalRecord {
@@ -45,13 +51,39 @@ export default function PatientDashboard() {
   const [analysisResult, setAnalysisResult] = useState('');
   const [vitalRecords, setVitalRecords] = useState<VitalRecord[]>([]);
   const [showAllRecords, setShowAllRecords] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [channelId, setChannelId] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [spo2, setSpo2] = useState('');
+  const [humidity, setHumidity] = useState('');
+  const [lastFetchTime, setLastFetchTime] = useState<Date | null>(null);
   
   const displayName = profile?.full_name?.split(' ')[0] || profile?.email?.split('@')[0] || 'there';
 
   // Load records from MongoDB on mount
   useEffect(() => {
     loadVitalRecords();
+    // Load saved channel ID from localStorage
+    const savedChannelId = localStorage.getItem('thingspeak_channel_id');
+    if (savedChannelId) {
+      setChannelId(savedChannelId);
+      thingSpeakService.setChannelId(savedChannelId);
+      setIsConnected(true);
+    }
   }, []);
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (autoRefresh && isConnected) {
+      const interval = setInterval(() => {
+        fetchThingSpeakData();
+      }, 15000); // Refresh every 15 seconds
+      return () => clearInterval(interval);
+    }
+  }, [autoRefresh, isConnected]);
 
   const loadVitalRecords = async () => {
     try {
@@ -59,6 +91,84 @@ export default function PatientDashboard() {
       setVitalRecords(records);
     } catch (error) {
       console.error('Error loading vital records:', error);
+    }
+  };
+
+  const connectToThingSpeak = () => {
+    if (!channelId.trim()) {
+      toast({
+        title: "Channel ID Required",
+        description: "Please enter your ThingSpeak Channel ID",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    thingSpeakService.setChannelId(channelId);
+    localStorage.setItem('thingspeak_channel_id', channelId);
+    setIsConnected(true);
+    
+    toast({
+      title: "Connected",
+      description: "Successfully connected to ThingSpeak channel",
+    });
+    
+    // Fetch initial data
+    fetchThingSpeakData();
+  };
+
+  const disconnectThingSpeak = () => {
+    setIsConnected(false);
+    setAutoRefresh(false);
+    localStorage.removeItem('thingspeak_channel_id');
+    
+    toast({
+      title: "Disconnected",
+      description: "Disconnected from ThingSpeak",
+    });
+  };
+
+  const fetchThingSpeakData = async () => {
+    if (!isConnected) return;
+    
+    setIsFetching(true);
+    try {
+      const data = await thingSpeakService.getLatestData();
+      
+      if (data) {
+        // Update the vitals with IoT data
+        setTemperature(data.temperature);
+        setHeartRate(data.heartRate);
+        setSpo2(data.spo2);
+        setHumidity(data.humidity);
+        setLastFetchTime(new Date(data.timestamp));
+        
+        // Calculate blood pressure estimate (this is a placeholder - actual BP needs proper sensor)
+        // In a real scenario, you'd have a BP sensor in field5/field6
+        const systolic = Math.round(110 + (parseFloat(data.heartRate) - 70) * 0.5);
+        const diastolic = Math.round(70 + (parseFloat(data.heartRate) - 70) * 0.3);
+        setBloodPressure(`${systolic}/${diastolic}`);
+        
+        toast({
+          title: "Data Updated",
+          description: `Latest sensor readings fetched from IoT device`,
+        });
+      } else {
+        toast({
+          title: "No Data",
+          description: "No data available from ThingSpeak channel",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching ThingSpeak data:', error);
+      toast({
+        title: "Fetch Failed",
+        description: error instanceof Error ? error.message : "Failed to fetch data from ThingSpeak",
+        variant: "destructive"
+      });
+    } finally {
+      setIsFetching(false);
     }
   };
 
@@ -280,6 +390,35 @@ export default function PatientDashboard() {
     { label: 'Avg Response', value: '2.3m', icon: Clock, trend: '+3%' }
   ];
 
+  const speakLatestVitals = () => {
+    if (typeof window === 'undefined' || !("speechSynthesis" in window)) {
+      toast({ title: 'Not supported', description: 'Speech is not available in this browser', variant: 'destructive' });
+      return;
+    }
+    if (!vitalRecords.length) {
+      toast({ title: 'No vitals yet', description: 'Add a reading first to use voice summary' });
+      return;
+    }
+
+    const latest = vitalRecords[0];
+    const recorded = new Date(latest.recordedAt).toLocaleString();
+    const summary = `Latest vitals. Blood pressure ${latest.bloodPressure}. Heart rate ${latest.heartRate} beats per minute. Temperature ${latest.temperature} degrees. Recorded at ${recorded}.`;
+
+    const engine = window.speechSynthesis;
+    engine.cancel();
+    const utterance = new SpeechSynthesisUtterance(summary);
+    speechRef.current = utterance;
+    setVoiceBusy(true);
+    utterance.onend = () => setVoiceBusy(false);
+    engine.speak(utterance);
+  };
+
+  const stopVoice = () => {
+    if (typeof window === 'undefined' || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    setVoiceBusy(false);
+  };
+
   return (
     <div className="min-h-screen creative-bg">
       <div className="max-w-7xl mx-auto p-6 space-y-8">
@@ -321,6 +460,117 @@ export default function PatientDashboard() {
           </div>
         </div>
 
+        {/* ThingSpeak IoT Connection Section */}
+        <Card className="medical-card border-0 overflow-hidden">
+          <CardContent className="p-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center">
+                <Wifi className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">IoT Sensor Connection</h2>
+                <p className="text-muted-foreground text-sm">Connect to ThingSpeak for real-time sensor data</p>
+              </div>
+            </div>
+
+            {!isConnected ? (
+              <div className="space-y-4">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1 space-y-2">
+                    <label className="text-sm font-semibold text-foreground">ThingSpeak Channel ID</label>
+                    <Input
+                      type="text"
+                      placeholder="Enter your channel ID"
+                      value={channelId}
+                      onChange={(e) => setChannelId(e.target.value)}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Find your Channel ID in ThingSpeak dashboard. Read API Key: 3QS1ZZ61IU0EWCHG
+                    </p>
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      onClick={connectToThingSpeak}
+                      className="text-white font-semibold"
+                      style={{ background: 'linear-gradient(to right, #0066cc, #2e8b57)' }}
+                    >
+                      <Wifi className="h-4 w-4 mr-2" />
+                      Connect
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Connected to Channel: {channelId}</p>
+                      {lastFetchTime && (
+                        <p className="text-xs text-muted-foreground">
+                          Last updated: {lastFetchTime.toLocaleTimeString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={fetchThingSpeakData}
+                      disabled={isFetching}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
+                      {isFetching ? 'Fetching...' : 'Fetch Now'}
+                    </Button>
+                    <Button
+                      onClick={() => setAutoRefresh(!autoRefresh)}
+                      variant={autoRefresh ? "default" : "outline"}
+                      size="sm"
+                    >
+                      {autoRefresh ? 'Auto-Refresh ON' : 'Auto-Refresh OFF'}
+                    </Button>
+                    <Button
+                      onClick={disconnectThingSpeak}
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Disconnect
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* IoT Sensor Readings Display */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-4 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+                    <p className="text-xs text-muted-foreground mb-1">Heart Rate (BPM)</p>
+                    <p className="text-2xl font-bold text-foreground">{heartRate || '--'}</p>
+                  </div>
+                  <div className="p-4 bg-gradient-to-br from-green-500/10 to-teal-500/10 rounded-lg border border-green-500/20">
+                    <p className="text-xs text-muted-foreground mb-1">SpO2</p>
+                    <p className="text-2xl font-bold text-foreground">{spo2 || '--'}%</p>
+                  </div>
+                  <div className="p-4 bg-gradient-to-br from-red-500/10 to-orange-500/10 rounded-lg border border-red-500/20">
+                    <p className="text-xs text-muted-foreground mb-1">Temperature</p>
+                    <p className="text-2xl font-bold text-foreground">{temperature || '--'}°C</p>
+                  </div>
+                  <div className="p-4 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-lg border border-cyan-500/20">
+                    <p className="text-xs text-muted-foreground mb-1">Humidity</p>
+                    <p className="text-2xl font-bold text-foreground">{humidity || '--'}%</p>
+                  </div>
+                </div>
+                
+                <div className="text-xs text-muted-foreground text-center">
+                  {autoRefresh && '🔄 Auto-refreshing every 15 seconds'}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Health Vitals Input Section */}
         <Card className="medical-card border-0 overflow-hidden">
           <CardContent className="p-8">
@@ -330,7 +580,9 @@ export default function PatientDashboard() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-foreground">Health Vitals Monitor</h2>
-                <p className="text-muted-foreground text-sm">Track and analyze your vital signs</p>
+                <p className="text-muted-foreground text-sm">
+                  {isConnected ? 'IoT sensors connected - data auto-populated' : 'Track and analyze your vital signs'}
+                </p>
               </div>
             </div>
 
@@ -345,6 +597,7 @@ export default function PatientDashboard() {
                     value={bloodPressure}
                     onChange={(e) => setBloodPressure(e.target.value)}
                     className="flex-1"
+                    disabled={isConnected && autoRefresh}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">Format: systolic/diastolic</p>
@@ -361,6 +614,7 @@ export default function PatientDashboard() {
                     onChange={(e) => setHeartRate(e.target.value)}
                     min="0"
                     max="200"
+                    disabled={isConnected && autoRefresh}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">Normal: 60-100 bpm</p>
@@ -378,11 +632,51 @@ export default function PatientDashboard() {
                     step="0.1"
                     min="35"
                     max="42"
+                    disabled={isConnected && autoRefresh}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">Normal: 36.5-37.5°C</p>
               </div>
             </div>
+
+            {/* Additional IoT Sensor Readings */}
+            {isConnected && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* SpO2 Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground">SpO2 (Oxygen Saturation %)</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="e.g., 98"
+                      value={spo2}
+                      onChange={(e) => setSpo2(e.target.value)}
+                      min="0"
+                      max="100"
+                      disabled={autoRefresh}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Normal: 95-100%</p>
+                </div>
+
+                {/* Humidity Input */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground">Humidity (%)</label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="e.g., 65"
+                      value={humidity}
+                      onChange={(e) => setHumidity(e.target.value)}
+                      min="0"
+                      max="100"
+                      disabled={autoRefresh}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Comfortable: 30-60%</p>
+                </div>
+              </div>
+            )}
 
             {/* Analyze Button */}
             <Button
@@ -407,6 +701,37 @@ export default function PatientDashboard() {
                 </p>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Voice Assistant (quick vitals readout) */}
+        <Card className="medical-card border-0 overflow-hidden">
+          <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Mic className="h-5 w-5 text-primary" />
+                <h3 className="text-lg font-semibold text-foreground">Voice Assistant</h3>
+              </div>
+              <p className="text-sm text-muted-foreground">Hear a quick summary of your latest recorded vitals. Runs locally; nothing is uploaded.</p>
+            </div>
+            <div className="flex gap-2 w-full md:w-auto">
+              <Button onClick={voiceBusy ? stopVoice : speakLatestVitals} className="flex-1 md:flex-none">
+                {voiceBusy ? (
+                  <>
+                    <Square className="h-4 w-4 mr-2" /> Stop
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-4 w-4 mr-2" /> Speak latest vitals
+                  </>
+                )}
+              </Button>
+              {!voiceBusy && (
+                <Button variant="outline" onClick={() => window.open('/health-insights', '_self')} className="flex-1 md:flex-none">
+                  Open full insights
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
 

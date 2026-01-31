@@ -19,6 +19,7 @@ import DiseaseIdentifier from "./pages/DiseaseIdentifier";
 import NotFound from "./pages/NotFound";
 import CompanionCare from "./pages/CompanionCare";
 import VoiceAI from "./pages/VoiceAI";
+import HealthInsightsPage from "./pages/HealthInsightsPage";
 
 const queryClient = new QueryClient();
 
@@ -105,6 +106,13 @@ const App = () => (
               <ProtectedRoute>
                 <Layout>
                   <VoiceAI />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/health-insights" element={
+              <ProtectedRoute>
+                <Layout>
+                  <HealthInsightsPage />
                 </Layout>
               </ProtectedRoute>
             } />

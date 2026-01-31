@@ -6,13 +6,17 @@ const patientDetailsSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  full_name: {
+    type: String,
+    required: true,
+  },
   age: {
     type: Number,
     required: true,
   },
   gender: {
     type: String,
-    enum: ['male', 'female', 'other'],
+    enum: ['male', 'female', 'other', 'prefer_not_to_say'],
     required: true,
   },
   blood_group: {

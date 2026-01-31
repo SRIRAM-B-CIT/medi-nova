@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { apiClient } from '@/lib/apiClient';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -43,24 +43,19 @@ export function EmergencyPatientDetails({ userId, showEmergencyContact = true }:
   const fetchPatientDetails = async (targetUserId: string) => {
     setIsLoading(true);
     try {
-      const { data, error } = await (supabase as any)
-        .from('patient_details')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
+      const data = await apiClient.getPatientDetailsByUserId(targetUserId);
       setPatientDetails(data);
     } catch (error: any) {
-      console.error('Error fetching patient details:', error);
-      toast({
-        title: "Error loading patient details",
-        description: "Unable to retrieve patient information",
-        variant: "destructive",
-      });
+      if (error?.message && /not found/i.test(error.message)) {
+        setPatientDetails(null);
+      } else {
+        console.error('Error fetching patient details:', error);
+        toast({
+          title: "Error loading patient details",
+          description: "Unable to retrieve patient information",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }

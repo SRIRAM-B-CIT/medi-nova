@@ -39,13 +39,14 @@ const patientMedicalTools = [
   { title: 'Medical Chatbot', url: '/medical-chatbot', icon: Bot },
   { title: 'Lab Report', url: '/voice-ai', icon: FileText },
   { title: 'Disease Risk', url: '/disease-risk', icon: Brain },
-  
+  { title: 'AI Health Insights', url: '/health-insights', icon: Activity },
+  { title: 'Calm Corner', url: '/calm', icon: Heart },
   
 ];
 
 const patientWellnessItems = [
-  { title: 'Calm Corner', url: '/calm', icon: Heart },
-  { title: 'First Aid Guide', url: '/first-aid', icon: Cross },
+  
+  //{ title: 'First Aid Guide', url: '/first-aid', icon: Cross },
   //{ title: 'Companion Care', url: '/companion-care', icon: Smile },
 ];
 
@@ -101,37 +102,6 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu className="space-y-2">
                 {patientMedicalTools.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={item.url} 
-                        end 
-                        className={({ isActive }) => 
-                          `flex items-center gap-3 px-3 py-2.5 rounded-xl soft-transition hover:scale-[1.02] ${
-                            isActive 
-                              ? 'bg-gradient-to-r from-secondary/20 to-calming/20 text-foreground border border-secondary/30 soft-glow shadow-lg' 
-                              : 'text-muted-foreground hover:text-secondary hover:bg-secondary/10'
-                          }`
-                        }
-                      >
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                        <span className="font-medium truncate">{item.title}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
-
-        {/* Wellness - Only for Patients */}
-        {!isDoctor && (
-          <SidebarGroup>
-            <SidebarGroupLabel className="text-[#2e8b57] font-semibold mb-3 px-2">Wellness</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="space-y-2">
-                {patientWellnessItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink 
