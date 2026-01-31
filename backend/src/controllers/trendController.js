@@ -1,5 +1,8 @@
 const VitalRecord = require('../models/VitalRecord');
 const TrendAnalysis = require('../models/TrendAnalysis');
+const axios = require('axios');
+
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL || 'http://localhost:5001';
 
 /**
  * Calculate linear regression trend slope
@@ -97,9 +100,10 @@ const findPeakTime = (records, vitalType) => {
  * Generate disease prediction based on trends and peaks
  * @param {Object} trends
  * @param {Object} peaks
- * @returns {String} Risk prediction
+ * @param {Object} latestRecord - Latest vital record with BP, HR, Temp
+ * @returns {Promise<Object>} Risk prediction with ML model insights
  */
-const predictDisease = (trends, peaks) => {
+const predictDisease = async (trends, peaks, latestRecord) => {
   const riskFactors = [];
 
   // Blood Pressure analysis
@@ -133,33 +137,88 @@ const predictDisease = (trends, peaks) => {
     riskFactors.push('fever_development');
   }
 
-  // Generate prediction message
+  // Get ML model prediction
+  let mlPrediction = null;
+  let mlError = null;
+  
+  try {
+    const bpParts = latestRecord.bloodPressure.split('/');
+    const response = await axios.post(`${ML_SERVICE_URL}/api/predict`, {
+      blood_pressure_systolic: parseInt(bpParts[0]),
+      blood_pressure_diastolic: parseInt(bpParts[1]),
+      heart_rate: parseInt(latestRecord.heartRate),
+      temperature: parseFloat(latestRecord.temperature),
+      spo2: parseFloat(latestRecord.spo2 || 98)
+    }, { timeout: 5000 });
+
+    mlPrediction = response.data;
+  } catch (error) {
+    console.warn('ML service unavailable, using rule-based prediction:', error.message);
+    mlError = error.message;
+  }
+
+  // Generate prediction message combining rule-based and ML insights
   let riskLevel = 'Low risk: Vitals normal';
   let severity = 'low';
+  let diseaseFromML = null;
+  let mlConfidence = 0;
 
-  if (riskFactors.length >= 3) {
-    riskLevel = 'High risk: Multiple concerning trends detected';
-    severity = 'high';
-  } else if (riskFactors.length === 2) {
-    riskLevel = 'Moderate risk: Several trends need monitoring';
-    severity = 'moderate';
-  } else if (riskFactors.length === 1) {
-    if (riskFactors.includes('infection_risk')) {
-      riskLevel = 'Moderate risk: Possible infection, monitor temperature';
+  if (mlPrediction) {
+    diseaseFromML = mlPrediction.disease;
+    mlConfidence = mlPrediction.confidence;
+    
+    // Determine severity based on ML confidence
+    if (mlPrediction.risk_level === 'high' || mlConfidence >= 0.95) {
+      severity = 'high';
+      riskLevel = `High risk: ML model predicts ${diseaseFromML} (${(mlConfidence * 100).toFixed(1)}% confidence)`;
+    } else if (mlPrediction.risk_level === 'medium' || mlConfidence >= 0.85) {
       severity = 'moderate';
-    } else if (riskFactors.includes('hypertension_risk')) {
-      riskLevel = 'Moderate risk: Elevated blood pressure trend';
+      riskLevel = `Moderate risk: Possible ${diseaseFromML} detected (${(mlConfidence * 100).toFixed(1)}% confidence)`;
+    } else {
+      severity = 'low';
+      riskLevel = `Low risk: ${diseaseFromML} unlikely (${(mlConfidence * 100).toFixed(1)}% confidence)`;
+    }
+
+    // Enhance with rule-based factors
+    if (riskFactors.length >= 3) {
+      severity = 'high';
+      riskLevel = `High risk: Multiple concerning trends + ${diseaseFromML} detected`;
+    } else if (riskFactors.length >= 2) {
+      severity = severity === 'low' ? 'moderate' : severity;
+    }
+  } else {
+    // Fallback to rule-based prediction
+    if (riskFactors.length >= 3) {
+      riskLevel = 'High risk: Multiple concerning trends detected';
+      severity = 'high';
+    } else if (riskFactors.length === 2) {
+      riskLevel = 'Moderate risk: Several trends need monitoring';
       severity = 'moderate';
-    } else if (riskFactors.includes('cardiac_acceleration')) {
-      riskLevel = 'Moderate risk: Elevated heart rate trend';
-      severity = 'moderate';
+    } else if (riskFactors.length === 1) {
+      if (riskFactors.includes('infection_risk')) {
+        riskLevel = 'Moderate risk: Possible infection, monitor temperature';
+        severity = 'moderate';
+      } else if (riskFactors.includes('hypertension_risk')) {
+        riskLevel = 'Moderate risk: Elevated blood pressure trend';
+        severity = 'moderate';
+      } else if (riskFactors.includes('cardiac_acceleration')) {
+        riskLevel = 'Moderate risk: Elevated heart rate trend';
+        severity = 'moderate';
+      }
     }
   }
 
   return {
     prediction: riskLevel,
     severity,
-    factors: riskFactors
+    factors: riskFactors,
+    mlPrediction: mlPrediction ? {
+      disease: diseaseFromML,
+      confidence: mlConfidence,
+      probabilities: mlPrediction.probability_distribution,
+      recommendations: mlPrediction.recommendations
+    } : null,
+    mlError: mlError
   };
 };
 
@@ -226,12 +285,12 @@ exports.getTrendAnalysis = async (req, res) => {
       temperature: findPeakTime(records, 'temperature')
     };
 
-    // Get disease prediction
-    const prediction = predictDisease(trends, peakTimes);
-
     // Get latest values
     const latestRecord = records[records.length - 1];
     const bpParts = latestRecord.bloodPressure.split('/');
+
+    // Get disease prediction
+    const prediction = await predictDisease(trends, peakTimes, latestRecord);
 
     // Prepare analysis data
     const analysisData = {
@@ -266,6 +325,7 @@ exports.getTrendAnalysis = async (req, res) => {
       diseasePrediction: prediction.prediction,
       riskSeverity: prediction.severity,
       riskFactors: prediction.factors,
+      mlPrediction: prediction.mlPrediction,
       vitalHistory: records.map(r => ({
         bpSystolic: parseInt(r.bloodPressure.split('/')[0]),
         heartRate: parseInt(r.heartRate),
@@ -296,7 +356,8 @@ exports.getTrendAnalysis = async (req, res) => {
       },
       diseasePrediction: prediction.prediction,
       riskSeverity: prediction.severity,
-      riskFactors: prediction.factors
+      riskFactors: prediction.factors,
+      mlPrediction: prediction.mlPrediction
     });
 
     // Add analysis ID to response

@@ -141,6 +141,26 @@ class ApiClient {
   async getTrendAnalysis(limit: number = 10) {
     return this.request(`/trend-analysis?limit=${limit}`);
   }
+
+  // Disease prediction endpoints
+  async predictDisease(vitals: {
+    blood_pressure_systolic: number;
+    blood_pressure_diastolic: number;
+    heart_rate: number;
+    temperature: number;
+  }) {
+    return this.request('/disease-predict', {
+      method: 'POST',
+      body: JSON.stringify(vitals),
+    });
+  }
+
+  async batchPredictDiseases(records: any[]) {
+    return this.request('/disease-predict/batch', {
+      method: 'POST',
+      body: JSON.stringify({ records }),
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

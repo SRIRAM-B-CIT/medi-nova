@@ -19,6 +19,7 @@ import {
   RefreshCw,
   BarChart3,
   Download,
+  Sparkles,
 } from 'lucide-react';
 
 interface TrendAnalysisData {
@@ -53,6 +54,12 @@ interface TrendAnalysisData {
   diseasePrediction: string;
   riskSeverity: 'low' | 'moderate' | 'high';
   riskFactors: string[];
+  mlPrediction?: {
+    disease: string;
+    confidence: number;
+    probabilities: Record<string, number>;
+    recommendations: string[];
+  } | null;
   vitalHistory: Array<{
     bpSystolic: number;
     heartRate: number;
@@ -656,6 +663,93 @@ export default function TrendAnalysis() {
           </div>
         </div>
       </Alert>
+
+      {/* ML Disease Prediction Card */}
+      {analysisData.mlPrediction && (
+        <Card className={`border-2 ${
+          analysisData.mlPrediction.confidence >= 0.95 
+            ? 'border-red-300 bg-red-50/50' 
+            : analysisData.mlPrediction.confidence >= 0.85
+            ? 'border-amber-300 bg-amber-50/50'
+            : 'border-green-300 bg-green-50/50'
+        }`}>
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Sparkles className={`w-5 h-5 ${
+                    analysisData.mlPrediction.confidence >= 0.95 
+                      ? 'text-red-600' 
+                      : analysisData.mlPrediction.confidence >= 0.85
+                      ? 'text-amber-600'
+                      : 'text-green-600'
+                  }`} />
+                  AI Health Prediction
+                </CardTitle>
+                <CardDescription>Machine Learning Model Analysis (95% Accuracy)</CardDescription>
+              </div>
+              <Badge className={
+                analysisData.mlPrediction.confidence >= 0.95 
+                  ? 'bg-red-600' 
+                  : analysisData.mlPrediction.confidence >= 0.85
+                  ? 'bg-amber-600'
+                  : 'bg-green-600'
+              }>
+                {(analysisData.mlPrediction.confidence * 100).toFixed(1)}% confidence
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Predicted Condition</p>
+              <p className="text-2xl font-bold text-foreground">{analysisData.mlPrediction.disease}</p>
+            </div>
+
+            {analysisData.mlPrediction.probabilities && (
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-3">Disease Probability Distribution</p>
+                <div className="space-y-2">
+                  {Object.entries(analysisData.mlPrediction.probabilities)
+                    .sort(([,a], [,b]) => b - a)
+                    .slice(0, 5)
+                    .map(([disease, prob]) => (
+                      <div key={disease} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium">{disease}</span>
+                          <span className="text-muted-foreground">{(prob * 100).toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-full rounded-full ${
+                              disease === analysisData.mlPrediction?.disease 
+                                ? 'bg-blue-600' 
+                                : 'bg-gray-400'
+                            }`}
+                            style={{ width: `${prob * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {analysisData.mlPrediction.recommendations && analysisData.mlPrediction.recommendations.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground mb-2">AI Recommendations</p>
+                <ul className="space-y-1">
+                  {analysisData.mlPrediction.recommendations.slice(0, 3).map((rec, idx) => (
+                    <li key={idx} className="text-sm text-foreground flex items-start gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                      <span>{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Trends Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -9,6 +9,7 @@ const patientDetailsRoutes = require('./routes/patientDetails');
 const medicationRemindersRoutes = require('./routes/medicationReminders');
 const vitalRecordsRoutes = require('./routes/vitalRecords');
 const trendAnalysisRoutes = require('./routes/trendAnalysis');
+const diseasePredictRoutes = require('./routes/diseasePredict');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/patient-details', patientDetailsRoutes);
 app.use('/api/medication-reminders', medicationRemindersRoutes);
 app.use('/api/vital-records', vitalRecordsRoutes);
 app.use('/api/trend-analysis', trendAnalysisRoutes);
+app.use('/api/disease-predict', diseasePredictRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

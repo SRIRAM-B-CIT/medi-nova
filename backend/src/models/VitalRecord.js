@@ -18,6 +18,10 @@ const vitalRecordSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  spo2: {
+    type: String,
+    default: '98'
+  },
   analysis: {
     type: String,
     required: true
