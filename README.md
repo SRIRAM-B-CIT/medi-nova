@@ -1,6 +1,7 @@
 # README for Medi-nova
 ## Demo Video
 - https://drive.google.com/file/d/1WkygLzSQfD_LJ7C2aLTigbshrABZ6Luk/view
+  
 This project is a comprehensive web and mobile application designed to predict diseases using multiple AI models. The application leverages IoT devices to collect essential health data and employs advanced machine learning algorithms to analyze this data, providing proactive health insights and predictions.
 
 ## Features
