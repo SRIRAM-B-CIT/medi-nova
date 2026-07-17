@@ -11,7 +11,10 @@ const next = require('next');
 const connectDB = require('./backend/src/config/database');
 const apiApp = require('./backend/src/app');
 
-const hostname = process.env.HOSTNAME || '0.0.0.0';
+// HOSTNAME is commonly set by container platforms to the container ID. Binding
+// to it makes the process unreachable through Render's public proxy, so listen
+// on every network interface instead.
+const hostname = '0.0.0.0';
 const port = Number(process.env.PORT || 3000);
 // Webpack uses substantially fewer Linux file watchers than Turbopack in this
 // repository and matches the bundler used by the production build.
@@ -28,7 +31,7 @@ async function start() {
   server.all('*', (req, res) => handle(req, res));
 
   server.listen(port, hostname, () => {
-    console.log(`MediNova is ready at http://localhost:${port}`);
+    console.log(`MediNova is listening on ${hostname}:${port}`);
     console.log(`UI and API are sharing port ${port}; ML service: ${process.env.ML_SERVICE_URL || 'http://localhost:5001'}`);
   });
 }
