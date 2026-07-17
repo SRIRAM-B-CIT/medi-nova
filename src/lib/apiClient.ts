@@ -1,20 +1,20 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 class ApiClient {
   private token: string | null;
 
   constructor() {
-    this.token = localStorage.getItem('token');
+    this.token = typeof window === 'undefined' ? null : localStorage.getItem('token');
   }
 
   setToken(token: string) {
     this.token = token;
-    localStorage.setItem('token', token);
+    if (typeof window !== 'undefined') localStorage.setItem('token', token);
   }
 
   removeToken() {
     this.token = null;
-    localStorage.removeItem('token');
+    if (typeof window !== 'undefined') localStorage.removeItem('token');
   }
 
   async request(endpoint: string, options: RequestInit = {}) {
@@ -148,6 +148,7 @@ class ApiClient {
     blood_pressure_diastolic: number;
     heart_rate: number;
     temperature: number;
+    spo2: number;
   }) {
     return this.request('/disease-predict', {
       method: 'POST',
@@ -160,6 +161,46 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ records }),
     });
+  }
+
+  async sendMedicalChatMessage(messages: Array<{
+    role: 'user' | 'assistant';
+    content: string;
+  }>) {
+    return this.request('/medical-chatbot', {
+      method: 'POST',
+      body: JSON.stringify({ messages }),
+    });
+  }
+
+  async summarizeHealthInsights(report: Record<string, unknown>) {
+    return this.request('/health-insights/summary', {
+      method: 'POST',
+      body: JSON.stringify({ report }),
+    });
+  }
+
+  async analyzeWeatherDiseaseRisk(weather: Record<string, unknown>) {
+    return this.request('/weather-disease-risk', {
+      method: 'POST',
+      body: JSON.stringify({ weather }),
+    });
+  }
+
+  async analyzeLabReport(reportName: string, extractedText: string) {
+    return this.request('/lab-reports/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ reportName, extractedText }),
+    });
+  }
+
+  async getLabReportHistory() {
+    return this.request('/lab-reports/history');
+  }
+
+  async getNearbyHospitals(lat: number, lon: number) {
+    const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+    return this.request(`/nearby-hospitals?${params.toString()}`);
   }
 }
 

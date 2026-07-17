@@ -148,7 +148,7 @@ export function ChatInterface() {
       speechSynthesis.cancel();
       
       // Remove emojis and medical symbols for better speech
-      const cleanText = text.replace(/[🚨🩹🔥💙🫁💚]/g, '').replace(/\n/g, ' ');
+      const cleanText = text.replace(/[🚨🩹🔥💙🫁💚]/gu, '').replace(/\n/g, ' ');
       
       const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.rate = 0.8;

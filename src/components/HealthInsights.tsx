@@ -13,7 +13,9 @@ import {
   Sparkles,
   Thermometer,
   Waves,
+  Loader2,
 } from "lucide-react";
+import { apiClient } from "@/lib/apiClient";
 
 interface VitalRecord {
   _id: string;
@@ -75,6 +77,8 @@ const statusLabel = (score: number) => {
 export function HealthInsights({ vitals, patientDetails }: HealthInsightsProps) {
   const [weather, setWeather] = useState<WeatherSnapshot | null>(null);
   const [voiceBusy, setVoiceBusy] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
   const recent = useMemo(() => vitals.slice(0, 10), [vitals]);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
 
@@ -254,16 +258,81 @@ export function HealthInsights({ vitals, patientDetails }: HealthInsightsProps) 
       }));
   }, [recent]);
 
-  const speakSummary = () => {
+  const getPreferredVoice = async (engine: SpeechSynthesis) => {
+    let voices = engine.getVoices();
+    if (!voices.length) {
+      await new Promise<void>((resolve) => {
+        const timeout = window.setTimeout(resolve, 1000);
+        engine.addEventListener("voiceschanged", () => {
+          window.clearTimeout(timeout);
+          resolve();
+        }, { once: true });
+      });
+      voices = engine.getVoices();
+    }
+
+    const femaleVoiceNames = [
+      "zira", "samantha", "victoria", "karen", "moira", "tessa", "fiona",
+      "veena", "neerja", "heera", "female", "google uk english female",
+    ];
+    return voices.find((voice) =>
+      voice.lang.toLowerCase().startsWith("en")
+      && femaleVoiceNames.some((name) => voice.name.toLowerCase().includes(name))
+    ) || voices.find((voice) => voice.lang.toLowerCase().startsWith("en-in"))
+      || voices.find((voice) => voice.lang.toLowerCase().startsWith("en"));
+  };
+
+  const speakSummary = async () => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     const engine = window.speechSynthesis;
     if (engine.speaking) engine.cancel();
-    const summary = `Overall health risk ${riskScores.overall.toFixed(0)} out of 100, status ${statusLabel(riskScores.overall).label}. Cardiac ${riskScores.cardiac.toFixed(0)}, temperature ${riskScores.fever.toFixed(0)}, hydration ${riskScores.dehydration.toFixed(0)}, stress ${stress.level}.`;
-    const utterance = new SpeechSynthesisUtterance(summary);
-    speechRef.current = utterance;
-    setVoiceBusy(true);
-    utterance.onend = () => setVoiceBusy(false);
-    engine.speak(utterance);
+    setSummaryLoading(true);
+    setSummaryError("");
+
+    try {
+      const report = {
+        readingsAnalyzed: recent.length,
+        overallRisk: Math.round(riskScores.overall),
+        overallStatus: statusLabel(riskScores.overall).label,
+        riskScores: {
+          cardiac: Math.round(riskScores.cardiac),
+          fever: Math.round(riskScores.fever),
+          dehydration: Math.round(riskScores.dehydration),
+          stress: Math.round(riskScores.stress),
+        },
+        averages: {
+          bloodPressure: `${averages.systolic.toFixed(0)}/${averages.diastolic.toFixed(0)} mmHg`,
+          heartRate: `${averages.heartRate.toFixed(0)} bpm`,
+          temperature: `${averages.temperature.toFixed(1)}°C`,
+        },
+        trends: {
+          bloodPressure: Number(trend.bp.toFixed(2)),
+          heartRate: Number(trend.hr.toFixed(2)),
+          temperature: Number(trend.temp.toFixed(2)),
+        },
+        stressLevel: stress.level,
+        anomalies,
+        alerts: warnings.map(({ title, detail, severity }) => ({ title, detail, severity })),
+      };
+      const data = await apiClient.summarizeHealthInsights(report);
+      const utterance = new SpeechSynthesisUtterance(data.summary);
+      const preferredVoice = await getPreferredVoice(engine);
+      if (preferredVoice) utterance.voice = preferredVoice;
+      utterance.rate = 0.92;
+      utterance.pitch = 1.05;
+      speechRef.current = utterance;
+      setVoiceBusy(true);
+      utterance.onend = () => setVoiceBusy(false);
+      utterance.onerror = () => {
+        setVoiceBusy(false);
+        setSummaryError("The summary could not be spoken on this device.");
+      };
+      engine.speak(utterance);
+    } catch (error) {
+      setSummaryError(error instanceof Error ? error.message : "The AI summary could not be generated.");
+    } finally {
+      setSummaryLoading(false);
+    }
   };
 
   const stopVoice = () => {
@@ -496,10 +565,12 @@ export function HealthInsights({ vitals, patientDetails }: HealthInsightsProps) 
             <CardDescription>Ask "How is my health today?"</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <Button onClick={voiceBusy ? stopVoice : speakSummary} className="w-full" variant="outline">
-              {voiceBusy ? "Stop" : "Speak summary"}
+            <Button onClick={voiceBusy ? stopVoice : speakSummary} className="w-full" variant="outline" disabled={summaryLoading}>
+              {summaryLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {summaryLoading ? "Creating summary" : voiceBusy ? "Stop" : "Speak AI summary"}
             </Button>
-            <div className="text-xs text-muted-foreground">Audio runs locally. No recordings are sent to servers.</div>
+            {summaryError && <div className="text-xs text-destructive">{summaryError}</div>}
+            <div className="text-xs text-muted-foreground">Report metrics are summarized by AI; speech plays locally using a preferred female voice when available.</div>
           </CardContent>
         </Card>
       </div>

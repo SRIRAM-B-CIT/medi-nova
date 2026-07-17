@@ -56,16 +56,16 @@ curl http://localhost:5001/health
 
 Test endpoint:
 ```bash
-curl http://localhost:5000
+curl http://localhost:3000/api
 # Should return: {"message": "MediNova API Server"}
 - [ ] Response is 200 OK
 ```
 
-### Terminal 3: Frontend
+### Terminal 2: Next.js UI + API
 ```bash
 # Run: npm run dev
 - [ ] Vite development server starting
-- [ ] "Local: http://localhost:5173" appears
+- [ ] "MediNova is ready at http://localhost:3000" appears
 - [ ] No compilation errors
 ```
 
@@ -74,7 +74,7 @@ curl http://localhost:5000
 ## 🧪 Frontend Feature Verification
 
 ### 1. Access Application
-- [ ] Open http://localhost:5173 in browser
+- [ ] Open http://localhost:3000 in browser
 - [ ] No error messages in console (F12)
 - [ ] Page loads completely
 
@@ -129,7 +129,7 @@ Verify:
 
 ### Backend Disease Prediction Endpoint
 ```bash
-curl -X POST http://localhost:5000/api/disease-predict \
+curl -X POST http://localhost:3000/api/disease-predict \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

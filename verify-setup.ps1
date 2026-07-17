@@ -48,35 +48,12 @@ if (Test-Path "backend\.env") {
     Write-Host "   ✗ Backend .env not found!" -ForegroundColor Red
 }
 
-# Check backend node_modules
-Write-Host "5. Checking backend dependencies..." -ForegroundColor Yellow
-if (Test-Path "backend\node_modules") {
-    Write-Host "   ✓ Backend dependencies installed" -ForegroundColor Green
-} else {
-    Write-Host "   ! Backend dependencies not installed" -ForegroundColor Yellow
-    Write-Host "   Run: cd backend && npm install" -ForegroundColor Yellow
-}
-
-# Check frontend .env
-Write-Host "6. Checking frontend .env..." -ForegroundColor Yellow
-if (Test-Path ".env") {
-    Write-Host "   ✓ Frontend .env exists" -ForegroundColor Green
-    $frontendEnv = Get-Content ".env" -Raw
-    if ($frontendEnv -match "VITE_API_URL") {
-        Write-Host "   ✓ VITE_API_URL configured" -ForegroundColor Green
-    } else {
-        Write-Host "   ! VITE_API_URL not found in .env" -ForegroundColor Yellow
-    }
-} else {
-    Write-Host "   ✗ Frontend .env not found!" -ForegroundColor Red
-}
-
-# Check frontend node_modules
-Write-Host "7. Checking frontend dependencies..." -ForegroundColor Yellow
+# Check integrated Next.js dependencies
+Write-Host "5. Checking Next.js dependencies..." -ForegroundColor Yellow
 if (Test-Path "node_modules") {
-    Write-Host "   ✓ Frontend dependencies installed" -ForegroundColor Green
+    Write-Host "   ✓ Next.js dependencies installed" -ForegroundColor Green
 } else {
-    Write-Host "   ! Frontend dependencies not installed" -ForegroundColor Yellow
+    Write-Host "   ! Next.js dependencies not installed" -ForegroundColor Yellow
     Write-Host "   Run: npm install" -ForegroundColor Yellow
 }
 
@@ -86,14 +63,12 @@ Write-Host "          Setup Status Summary          " -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "✓ MongoDB URI: mongodb+srv://srirambcse2024_db_user:...@cluster0.xw8vklw.mongodb.net" -ForegroundColor Green
-Write-Host "✓ Backend Port: 5000" -ForegroundColor Green
-Write-Host "✓ Frontend Port: 5173 (default Vite)" -ForegroundColor Green
+Write-Host "✓ Next.js UI + API Port: 3000" -ForegroundColor Green
 Write-Host "✓ Authentication: JWT-based" -ForegroundColor Green
 Write-Host "✓ Database: MongoDB Atlas" -ForegroundColor Green
 Write-Host ""
 Write-Host "To start the application:" -ForegroundColor Yellow
-Write-Host "  1. Terminal 1: cd backend && npm run dev" -ForegroundColor White
-Write-Host "  2. Terminal 2: npm run dev" -ForegroundColor White
+Write-Host "  npm run dev" -ForegroundColor White
 Write-Host ""
 Write-Host "Or use the startup script:" -ForegroundColor Yellow
 Write-Host "  .\start-both.bat" -ForegroundColor White

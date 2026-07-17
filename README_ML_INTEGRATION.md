@@ -65,7 +65,7 @@ Your MediNova healthcare system is now powered by a **Random Forest ML model** t
 ✅ src/lib/apiClient.ts
    └── Added predictDisease() methods
 
-✅ src/pages/PatientDashboard.tsx
+✅ src/screens/PatientDashboard.tsx
    └── Added ML prediction card display
 
 ✅ src/components/TrendAnalysis.tsx
@@ -83,7 +83,6 @@ setup-ml-service.bat
 
 ### Step 2: Install Dependencies
 ```bash
-cd backend && npm install && cd ..
 npm install
 ```
 
@@ -92,7 +91,7 @@ npm install
 start-all.bat
 ```
 
-**Done!** 🎉 Open http://localhost:5173
+**Done!** 🎉 Open http://localhost:3000
 
 ---
 
@@ -122,7 +121,7 @@ start-all.bat
 ## 🔍 WHERE TO FIND IT
 
 ### Patient Dashboard
-1. Go to http://localhost:5173
+1. Go to http://localhost:3000
 2. Enter vital signs (BP, HR, Temperature)
 3. Click "Analyze Health Metrics"
 4. See **AI Health Prediction Card** with:
@@ -285,7 +284,7 @@ Your MediNova system is now powered by a state-of-the-art 95% accurate ML model 
 
 1. Windows: `start-all.bat`
 2. Linux/Mac: `./start-all.sh`
-3. Open: http://localhost:5173
+3. Open: http://localhost:3000
 
 **That's it! Enjoy your ML-powered healthcare system! 🚀**
 

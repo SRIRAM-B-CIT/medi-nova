@@ -1,5 +1,5 @@
 @echo off
-REM MediNova Complete Startup Script for Windows
+REM MediNova Next.js + ML startup script for Windows
 
 echo.
 echo 🏥 MediNova Complete Startup
@@ -9,7 +9,7 @@ echo.
 REM Check if Node.js is installed
 node --version >nul 2>&1
 if errorlevel 1 (
-    echo ❌ Node.js is not installed. Please install Node.js 18+ first.
+    echo ❌ Node.js is not installed. Please install Node.js 20.9+ first.
     pause
     exit /b 1
 )
@@ -42,32 +42,21 @@ cd ..
 start "MediNova ML Service" cmd /k "cd ml_service & venv\Scripts\activate.bat & python app.py"
 timeout /t 3 /nobreak
 
-REM Start Backend
-echo 2️⃣  Starting Backend API (Port 5000) in new window...
-cd backend
+REM Start the integrated Next.js frontend and API
+echo 2️⃣  Starting MediNova Web + API (Port 3000) in new window...
 if not exist "node_modules" (
-    echo    Installing backend dependencies...
+    echo    Installing Node.js dependencies...
     call npm install
 )
-cd ..
-start "MediNova Backend API" cmd /k "cd backend & npm run dev"
-timeout /t 3 /nobreak
-
-REM Start Frontend
-echo 3️⃣  Starting Frontend (Port 5173) in new window...
-if not exist "node_modules" (
-    echo    Installing frontend dependencies...
-    call npm install
-)
-start "MediNova Frontend" cmd /k "npm run dev"
+start "MediNova Next.js" cmd /k "npm run dev"
 
 echo.
 echo ✅ All services started successfully!
 echo.
-echo 📱 Access MediNova at: http://localhost:5173
+echo 📱 Access MediNova at: http://localhost:3000
 echo.
 echo 🔗 API Endpoints:
-echo    - Backend API: http://localhost:5000
+echo    - Next.js UI + Backend API: http://localhost:3000
 echo    - ML Service: http://localhost:5001
 echo.
 echo Each service is running in its own terminal window.

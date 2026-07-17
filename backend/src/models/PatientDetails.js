@@ -31,6 +31,40 @@ const patientDetailsSchema = new mongoose.Schema({
   emergency_contact_name: String,
   emergency_contact_phone: String,
   emergency_contact_relation: String,
+  lab_report_summaries: [{
+    report_name: {
+      type: String,
+      required: true,
+      maxlength: 200,
+    },
+    report_date: String,
+    overview: {
+      type: String,
+      required: true,
+      maxlength: 3000,
+    },
+    overall_flag: {
+      type: String,
+      enum: ['Within range', 'Review suggested', 'Prompt review', 'Unclear'],
+      default: 'Unclear',
+    },
+    key_findings: [{
+      test: String,
+      value: String,
+      reference_range: String,
+      status: {
+        type: String,
+        enum: ['Low', 'Within range', 'High', 'Abnormal', 'Unclear'],
+      },
+      explanation: String,
+    }],
+    follow_up_questions: [String],
+    urgent_warnings: [String],
+    created_at: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
   created_at: {
     type: Date,
     default: Date.now,

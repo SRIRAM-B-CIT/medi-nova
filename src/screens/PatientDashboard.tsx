@@ -28,7 +28,8 @@ import {
   Square,
   RefreshCw,
   Wifi,
-  Settings
+  Settings,
+  Loader2
 } from 'lucide-react';
 
 interface VitalRecord {
@@ -60,6 +61,7 @@ export default function PatientDashboard() {
   const [vitalRecords, setVitalRecords] = useState<VitalRecord[]>([]);
   const [showAllRecords, setShowAllRecords] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const speechRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [channelId, setChannelId] = useState('');
   const [isConnected, setIsConnected] = useState(false);
@@ -225,7 +227,7 @@ export default function PatientDashboard() {
 
       // Basic health analysis logic combined with ML insights
       let analysis = `📊 Health Vitals Analysis:\n\n`;
-      let issues = [];
+      const issues = [];
 
       // Blood Pressure Analysis
       if (systolic < 90 || diastolic < 60) {
@@ -435,7 +437,31 @@ export default function PatientDashboard() {
     { label: 'Avg Response', value: '2.3m', icon: Clock, trend: '+3%' }
   ];
 
-  const speakLatestVitals = () => {
+  const getPreferredVoice = async (engine: SpeechSynthesis) => {
+    let voices = engine.getVoices();
+    if (!voices.length) {
+      await new Promise<void>((resolve) => {
+        const timeout = window.setTimeout(resolve, 1000);
+        engine.addEventListener('voiceschanged', () => {
+          window.clearTimeout(timeout);
+          resolve();
+        }, { once: true });
+      });
+      voices = engine.getVoices();
+    }
+
+    const femaleVoiceNames = [
+      'zira', 'samantha', 'victoria', 'karen', 'moira', 'tessa', 'fiona',
+      'veena', 'neerja', 'heera', 'female', 'google uk english female',
+    ];
+    return voices.find((voice) =>
+      voice.lang.toLowerCase().startsWith('en')
+      && femaleVoiceNames.some((name) => voice.name.toLowerCase().includes(name))
+    ) || voices.find((voice) => voice.lang.toLowerCase().startsWith('en-in'))
+      || voices.find((voice) => voice.lang.toLowerCase().startsWith('en'));
+  };
+
+  const speakAiSummary = async () => {
     if (typeof window === 'undefined' || !("speechSynthesis" in window)) {
       toast({ title: 'Not supported', description: 'Speech is not available in this browser', variant: 'destructive' });
       return;
@@ -445,17 +471,52 @@ export default function PatientDashboard() {
       return;
     }
 
-    const latest = vitalRecords[0];
-    const recorded = new Date(latest.recordedAt).toLocaleString();
-    const summary = `Latest vitals. Blood pressure ${latest.bloodPressure}. Heart rate ${latest.heartRate} beats per minute. Temperature ${latest.temperature} degrees. Recorded at ${recorded}.`;
-
     const engine = window.speechSynthesis;
     engine.cancel();
-    const utterance = new SpeechSynthesisUtterance(summary);
-    speechRef.current = utterance;
-    setVoiceBusy(true);
-    utterance.onend = () => setVoiceBusy(false);
-    engine.speak(utterance);
+    setSummaryLoading(true);
+
+    try {
+      const recentRecords = vitalRecords.slice(0, 10).map((record) => ({
+        bloodPressure: record.bloodPressure,
+        heartRate: record.heartRate,
+        temperature: record.temperature,
+        status: record.analysis.includes('⚠️') ? 'Abnormal' : 'Normal',
+        recordedAt: record.recordedAt,
+      }));
+      const report = {
+        readingsAnalyzed: recentRecords.length,
+        latestVitals: recentRecords[0],
+        recentVitals: recentRecords,
+        currentAnalysis: analysisResult || undefined,
+        modelInsight: mlPrediction ? {
+          predictedClass: mlPrediction.disease,
+          confidencePercent: Number((mlPrediction.confidence * 100).toFixed(1)),
+          displayedRiskLevel: mlPrediction.risk_level,
+        } : undefined,
+      };
+      const data = await apiClient.summarizeHealthInsights(report);
+      const utterance = new SpeechSynthesisUtterance(data.summary);
+      const preferredVoice = await getPreferredVoice(engine);
+      if (preferredVoice) utterance.voice = preferredVoice;
+      utterance.rate = 0.92;
+      utterance.pitch = 1.05;
+      speechRef.current = utterance;
+      setVoiceBusy(true);
+      utterance.onend = () => setVoiceBusy(false);
+      utterance.onerror = () => {
+        setVoiceBusy(false);
+        toast({ title: 'Speech failed', description: 'The summary could not be spoken on this device.', variant: 'destructive' });
+      };
+      engine.speak(utterance);
+    } catch (error) {
+      toast({
+        title: 'AI summary failed',
+        description: error instanceof Error ? error.message : 'The AI summary could not be generated.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSummaryLoading(false);
+    }
   };
 
   const stopVoice = () => {
@@ -855,33 +916,32 @@ export default function PatientDashboard() {
           </CardContent>
         </Card>
 
-        {/* Voice Assistant (quick vitals readout) */}
+        {/* AI voice summary */}
         <Card className="medical-card border-0 overflow-hidden">
           <CardContent className="p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Mic className="h-5 w-5 text-primary" />
-                <h3 className="text-lg font-semibold text-foreground">Voice Assistant</h3>
+                <h3 className="text-lg font-semibold text-foreground">AI Voice Summary</h3>
               </div>
-              <p className="text-sm text-muted-foreground">Hear a quick summary of your latest recorded vitals. Runs locally; nothing is uploaded.</p>
+              <p className="text-sm text-muted-foreground">Hear a short AI summary of your dashboard report in a preferred female voice.</p>
             </div>
-            <div className="flex gap-2 w-full md:w-auto">
-              <Button onClick={voiceBusy ? stopVoice : speakLatestVitals} className="flex-1 md:flex-none">
-                {voiceBusy ? (
+            <div className="w-full md:w-auto">
+              <Button onClick={voiceBusy ? stopVoice : speakAiSummary} className="w-full md:w-auto" disabled={summaryLoading}>
+                {summaryLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating summary
+                  </>
+                ) : voiceBusy ? (
                   <>
                     <Square className="h-4 w-4 mr-2" /> Stop
                   </>
                 ) : (
                   <>
-                    <Mic className="h-4 w-4 mr-2" /> Speak latest vitals
+                    <Mic className="h-4 w-4 mr-2" /> Speak AI summary
                   </>
                 )}
               </Button>
-              {!voiceBusy && (
-                <Button variant="outline" onClick={() => window.open('/health-insights', '_self')} className="flex-1 md:flex-none">
-                  Open full insights
-                </Button>
-              )}
             </div>
           </CardContent>
         </Card>

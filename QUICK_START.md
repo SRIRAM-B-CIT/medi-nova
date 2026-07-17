@@ -17,12 +17,7 @@ Your Random Forest ML model (95% accuracy) has been fully integrated into MediNo
 ### Step 1: Install Dependencies
 
 ```bash
-# Backend
-cd backend
-npm install
-cd ..
-
-# Frontend
+# Next.js UI and API dependencies
 npm install
 ```
 
@@ -58,7 +53,7 @@ That's it! 🎉
 
 ## Where to Find the ML Features
 
-### 1. Patient Dashboard (`http://localhost:5173`)
+### 1. Patient Dashboard (`http://localhost:3000`)
 
 Enter vital signs and click "Analyze Health Metrics" to see:
 - **AI Health Prediction Card** - Disease prediction with confidence
@@ -86,7 +81,7 @@ When viewing emergency patient details or doctor dashboards, ML predictions appe
 
 **Single Prediction:**
 ```bash
-curl -X POST http://localhost:5000/api/disease-predict \
+curl -X POST http://localhost:3000/api/disease-predict \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -115,10 +110,8 @@ curl -X POST http://localhost:5000/api/disease-predict \
 ```
 Your Browser
      ↓
-Frontend (React) ← → Backend (Node.js) ← → ML Service (Flask)
-Port 5173          Port 5000             Port 5001
-                                         (Python Models)
-     ↓
+Next.js UI + Express API (Port 3000) ← → ML Service (Port 5001)
+     ↓                                  (Python Models)
 MongoDB (Patient Data)
 ```
 
@@ -130,7 +123,7 @@ MongoDB (Patient Data)
 
 ```
 ML_SERVICE_URL=http://localhost:5001
-PORT=5000
+PORT=3000
 ```
 
 No additional setup needed - everything is pre-configured!
@@ -185,7 +178,7 @@ Expected: Heart Disease (high confidence)
 
 ### Predictions Not Showing?
 1. Check browser console for errors (F12)
-2. Verify backend is running: `curl http://localhost:5000`
+2. Verify the integrated API is running: `curl http://localhost:3000/api`
 3. Verify ML service is running: `curl http://localhost:5001/health`
 
 ### Model Loading Error?
@@ -212,7 +205,7 @@ Expected: Heart Disease (high confidence)
 - `backend/src/index.js` - Added disease prediction route
 - `backend/.env` - Added ML service URL
 - `src/lib/apiClient.ts` - Added ML prediction methods
-- `src/pages/PatientDashboard.tsx` - Added ML prediction display
+- `src/screens/PatientDashboard.tsx` - Added ML prediction display
 - `src/components/TrendAnalysis.tsx` - Added ML insights card
 
 ---
@@ -243,7 +236,7 @@ For detailed technical information, see:
 - `ML_INTEGRATION_GUIDE.md` - Full integration documentation
 - `ml_service/app.py` - ML service source code
 - `backend/src/controllers/trendController.js` - Backend integration
-- `src/pages/PatientDashboard.tsx` - Frontend implementation
+- `src/screens/PatientDashboard.tsx` - Frontend implementation
 
 ---
 
@@ -251,4 +244,4 @@ For detailed technical information, see:
 
 Your MediNova system is now powered by a 95% accurate ML model for disease prediction!
 
-Go to `http://localhost:5173` and start testing →
+Go to `http://localhost:3000` and start testing →

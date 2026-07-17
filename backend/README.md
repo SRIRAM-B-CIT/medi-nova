@@ -58,4 +58,4 @@ npm start
 - `NODE_ENV` - Environment (development/production)
 - `JWT_SECRET` - Secret key for JWT tokens
 - `JWT_EXPIRES_IN` - Token expiration time
-- `FRONTEND_URL` - Frontend URL for CORS
+- `PORT` - Shared Next.js UI/API port (defaults to `3000`)

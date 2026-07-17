@@ -22,9 +22,27 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+interface DataWarning {
+  daysAvailable: number;
+  message: string;
+  recommendation: string;
+  accuracyNote: string;
+}
+
+interface DataStats {
+  totalReadings: number;
+  daysOfData: number;
+  dateRange: {
+    from: string;
+    to: string;
+  };
+}
+
 interface TrendAnalysisData {
   success: boolean;
   dataPoints: number;
+  dataWarning?: DataWarning | null;
+  dataStats?: DataStats;
   latestVitals: {
     bloodPressure: string;
     heartRate: string;
@@ -342,7 +360,7 @@ export default function TrendAnalysis() {
       </tr>
       <tr>
         <td class="label">Analysis Period:</td>
-        <td>Last 10 Days</td>
+        <td>Last ${analysisData.dataStats?.daysOfData ?? 10} Days</td>
         <td class="label">Data Points:</td>
         <td>${analysisData.dataPoints} Vital Records</td>
       </tr>
@@ -353,11 +371,19 @@ export default function TrendAnalysis() {
     </table>
   </div>
 
+  ${analysisData.dataWarning ? `
+  <div class="disclaimer">
+    <p><strong>⚠️ Limited Data Warning:</strong> ${analysisData.dataWarning.message}</p>
+    <p>${analysisData.dataWarning.recommendation}</p>
+    <p><em>${analysisData.dataWarning.accuracyNote}</em></p>
+  </div>
+  ` : ''}
+
   <!-- Executive Summary -->
   <div class="section">
     <div class="section-title">I. Executive Summary</div>
     <div class="summary-box">
-      <p><strong>Analysis Overview:</strong> This report presents a comprehensive analysis of ${analysisData.dataPoints} vital sign measurements collected over the past 10 days. The assessment includes trend analysis, temporal pattern recognition, and predictive risk evaluation based on established medical guidelines.</p>
+      <p><strong>Analysis Overview:</strong> This report presents a comprehensive analysis of ${analysisData.dataPoints} vital sign measurements collected over the past ${analysisData.dataStats?.daysOfData ?? 10} days. The assessment includes trend analysis, temporal pattern recognition, and predictive risk evaluation based on established medical guidelines.</p>
     </div>
   </div>
 
@@ -641,6 +667,53 @@ export default function TrendAnalysis() {
           </div>
         </CardHeader>
       </Card>
+
+      {/* Data Warning Banner - When less than 10 days available */}
+      {analysisData.dataWarning && (
+        <Alert className="border-l-4 border-yellow-400 bg-yellow-50">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-yellow-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-yellow-800 font-semibold mb-2">
+                ⚠️ Limited Data Available
+              </h4>
+              <p className="text-yellow-700 mb-2">
+                <strong>{analysisData.dataWarning.message}</strong>
+              </p>
+              <p className="text-yellow-600 text-sm mb-2">
+                {analysisData.dataWarning.recommendation}
+              </p>
+              <p className="text-yellow-600 text-sm italic">
+                📊 {analysisData.dataWarning.accuracyNote}
+              </p>
+              {analysisData.dataStats && (
+                <div className="mt-3 text-xs text-yellow-600">
+                  📈 Total readings: {analysisData.dataStats.totalReadings} | 
+                  📅 Days covered: {analysisData.dataStats.daysOfData}
+                </div>
+              )}
+            </div>
+          </div>
+        </Alert>
+      )}
+
+      {/* Success Banner - When 10+ days available */}
+      {analysisData.dataStats && analysisData.dataStats.daysOfData >= 10 && (
+        <Alert className="border-l-4 border-green-400 bg-green-50">
+          <div className="flex items-start gap-3">
+            <CheckCircle2 className="w-6 h-6 text-green-600 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-green-800 font-semibold mb-1">
+                ✅ Optimal Data Available
+              </h4>
+              <p className="text-green-700 text-sm">
+                {analysisData.dataStats.daysOfData} days of data collected ({analysisData.dataStats.totalReadings} readings) - 
+                Predictions are at peak accuracy (95%)!
+              </p>
+            </div>
+          </div>
+        </Alert>
+      )}
 
       {/* Risk Prediction Alert */}
       <Alert className={`border-2 ${getRiskColor(analysisData.riskSeverity)}`}>

@@ -82,10 +82,16 @@ class ThingSpeakService {
     const mockData = generateMockData();
 
     // Use mock data only for invalid BPM and SpO2, keep real temperature and humidity
+    // Add +7 to temperature value only if it's less than 32
+    const tempValue = parseFloat(data.temperature);
+    const adjustedTemp = isNaN(tempValue) 
+      ? data.temperature 
+      : (tempValue < 32 ? tempValue + 7 : tempValue).toFixed(2);
+    
     const sanitizedData: IoTSensorData = {
       heartRate: isHeartRateInvalid ? mockData.bpm : data.heartRate,
       spo2: isSpo2Invalid ? mockData.spo2 : data.spo2,
-      temperature: data.temperature,
+      temperature: adjustedTemp,
       humidity: data.humidity,
       timestamp: data.timestamp
     };

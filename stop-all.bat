@@ -6,10 +6,10 @@ echo.
 echo 🛑 Stopping MediNova Services...
 echo.
 
-REM Kill all Node.js processes (Backend + Frontend)
+REM Kill Node.js (integrated Next.js UI + API)
 taskkill /F /IM node.exe 2>nul
 if %errorlevel% equ 0 (
-    echo ✓ Backend ^& Frontend stopped
+    echo ✓ Next.js UI ^& API stopped
 ) else (
     echo ⚠ No Node.js processes found or already stopped
 )
@@ -27,7 +27,6 @@ echo ✅ All MediNova services stopped successfully!
 echo.
 echo 📊 Summary:
 echo - ML Service (Port 5001): Stopped
-echo - Backend API (Port 5000): Stopped
-echo - Frontend (Port 5173): Stopped
+echo - Next.js UI + API (Port 3000): Stopped
 echo.
 pause

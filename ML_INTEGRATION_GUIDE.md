@@ -144,7 +144,7 @@ cd backend
 npm run dev
 ```
 
-Backend will be available at: `http://localhost:5000`
+The integrated API is available at: `http://localhost:3000/api`
 
 #### Start Frontend
 
@@ -153,7 +153,7 @@ Backend will be available at: `http://localhost:5000`
 npm run dev
 ```
 
-Frontend will be available at: `http://localhost:5173`
+The Next.js frontend is available at: `http://localhost:3000`
 
 ---
 
@@ -472,7 +472,7 @@ To retrain the model with new data:
 
 - **Model Training**: See `ml_service/Vitals_Predicted_Disease_Model.ipynb`
 - **Backend API**: Check `backend/src/controllers/trendController.js`
-- **Frontend Components**: See `src/components/TrendAnalysis.tsx` and `src/pages/PatientDashboard.tsx`
+- **Frontend Components**: See `src/components/TrendAnalysis.tsx` and `src/screens/PatientDashboard.tsx`
 - **Error Logs**: Check terminal output for detailed error messages
 
 ---
