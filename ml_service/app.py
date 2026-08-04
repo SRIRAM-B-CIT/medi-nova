@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import logging
 from pathlib import Path
+from huggingface_hub import hf_hub_download
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -19,19 +20,49 @@ app = Flask(__name__)
 CORS(app)
 
 # Load ML models
-model_dir = Path(__file__).parent.parent / "ML model"
+model_dir = Path(__file__).resolve().parent.parent / "ML model"
+hf_repo_id = "sri123454321/medinova"
+model_filenames = (
+    "vitals_random_forest_model.pkl",
+    "vitals_feature_scaler.pkl",
+    "vitals_label_encoder.pkl",
+)
 
-try:
-    model = joblib.load(model_dir / "vitals_random_forest_model.pkl")
-    scaler = joblib.load(model_dir / "vitals_feature_scaler.pkl")
-    encoder = joblib.load(model_dir / "vitals_label_encoder.pkl")
-    
-    logger.info("✓ ML models loaded successfully")
-except Exception as e:
-    logger.error(f"✗ Failed to load ML models: {str(e)}")
-    model = None
-    scaler = None
-    encoder = None
+
+def _load_ml_artifacts():
+    local_paths = {filename: model_dir / filename for filename in model_filenames}
+
+    try:
+        if all(path.exists() for path in local_paths.values()):
+            logger.info("Loading local ML model...")
+            source_paths = local_paths
+        else:
+            missing_files = [filename for filename, path in local_paths.items() if not path.exists()]
+            logger.info("Local model not found. Downloading from Hugging Face...")
+            logger.info("Missing local files: %s", ", ".join(missing_files))
+
+            source_paths = {
+                filename: Path(
+                    hf_hub_download(
+                        repo_id=hf_repo_id,
+                        filename=filename,
+                    )
+                )
+                for filename in model_filenames
+            }
+
+        loaded_model = joblib.load(source_paths["vitals_random_forest_model.pkl"])
+        loaded_scaler = joblib.load(source_paths["vitals_feature_scaler.pkl"])
+        loaded_encoder = joblib.load(source_paths["vitals_label_encoder.pkl"])
+
+        logger.info("Model loaded successfully.")
+        return loaded_model, loaded_scaler, loaded_encoder
+    except Exception as e:
+        logger.exception("Failed to load ML model artifacts: %s", str(e))
+        return None, None, None
+
+
+model, scaler, encoder = _load_ml_artifacts()
 
 
 @app.route("/health", methods=["GET"])
