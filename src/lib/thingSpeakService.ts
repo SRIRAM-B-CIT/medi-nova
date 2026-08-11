@@ -1,5 +1,5 @@
 // ThingSpeak API integration for IoT sensor data
-const THINGSPEAK_READ_API_KEY = '3QS1ZZ61IU0EWCHG';
+const THINGSPEAK_READ_API_KEY = 'AQR377SQC6YT5NGA';
 const THINGSPEAK_BASE_URL = 'https://api.thingspeak.com/channels';
 
 // You'll need to get your channel ID from ThingSpeak
