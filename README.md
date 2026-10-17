@@ -66,8 +66,14 @@ Contributions are welcome! Please follow these steps to contribute:
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is dual-licensed under either:
+
+- **Apache License, Version 2.0** ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- **MIT License** ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option (`MIT OR Apache-2.0`). See the [LICENSE](LICENSE) file for details.
 
 ---
 
 This README provides a clear and concise overview of the Medical AI App, detailing its features, installation instructions, usage guidelines, contribution guidelines, and licensing information.
+
